@@ -1,0 +1,104 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: couchbase-init
+  namespace: kafka-dev
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init
+        image: couchbase/server:community-7.1.0
+        env:
+          - name: COUCHBASE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: couchbase-credentials
+                key: username
+          - name: COUCHBASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: couchbase-credentials
+                key: password
+        command:
+        - sh
+        - -c
+        - |
+          USERNAME=$COUCHBASE_USERNAME
+          PASSWORD=$COUCHBASE_PASSWORD
+          HOST=couchbase-svc:8091
+          
+          echo "==> Esperando a que Couchbase esté listo..."
+          for i in $(seq 1 30); do
+            if nc -z couchbase-svc 8091; then
+              echo "✅ Couchbase port 8091 is open"
+              break
+            fi
+            echo "Waiting... attempt $i/30"
+            sleep 5
+          done
+          
+          echo "==> Esperando a que la API REST esté disponible..."
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://$HOST/pools | grep -q "200"; then
+              echo "✅ Couchbase API is ready"
+              break
+            fi
+            echo "Waiting for API... attempt $i/30"
+            sleep 5
+          done
+          
+          echo "==> Verificando cluster..."
+          if couchbase-cli cluster-info -c $HOST -u $USERNAME -p $PASSWORD 2>/dev/null; then
+            echo "✅ Cluster already initialized"
+          else
+            echo "==> Inicializando cluster..."
+            couchbase-cli cluster-init -c $HOST \
+              --cluster-username=$USERNAME \
+              --cluster-password=$PASSWORD \
+              --cluster-name=my-cluster \
+              --services=data,index,query,fts \
+              --index-storage-setting=default
+            echo "✅ Cluster initialized"
+          fi
+          
+          echo "==> Verificando bucket 'events'..."
+          if couchbase-cli bucket-list -c $HOST -u $USERNAME -p $PASSWORD | grep -q "events"; then
+            echo "✅ Bucket 'events' already exists"
+          else
+            echo "==> Creando bucket 'events'..."
+            couchbase-cli bucket-create -c $HOST \
+              --username=$USERNAME \
+              --password=$PASSWORD \
+              --bucket=events \
+              --bucket-type=couchbase \
+              --bucket-ramsize=256 \
+              --enable-flush=1
+            echo "✅ Bucket 'events' created"
+          fi
+          
+          echo "==> Verificando scope 'application'..."
+          if curl -s -u $USERNAME:$PASSWORD http://$HOST/pools/default/buckets/events/scopes | grep -q '"name":"application"'; then
+            echo "✅ Scope 'application' already exists"
+          else
+            echo "==> Creando scope 'application'..."
+            curl -X POST http://$USERNAME:$PASSWORD@$HOST/pools/default/buckets/events/scopes \
+              -d name=application
+            echo "✅ Scope 'application' created"
+          fi
+          
+          echo "==> Verificando colección 'processed-events'..."
+          if curl -s -u $USERNAME:$PASSWORD http://$HOST/pools/default/buckets/events/scopes/application/collections | grep -q '"name":"processed-events"'; then
+            echo "✅ Colección 'processed-events' already exists"
+          else
+            echo "==> Creando colección 'processed-events'..."
+            curl -X POST http://$USERNAME:$PASSWORD@$HOST/pools/default/buckets/events/scopes/application/collections \
+              -d name=processed-events
+            echo "✅ Colección 'processed-events' created"
+          fi
+          
+          echo "✅ Couchbase inicializado correctamente"

@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: e2e-test-
+  namespace: kafka-dev
+spec:
+  entrypoint: main
+  templates:
+  - name: main
+    steps:
+    - - name: generate-event
+        template: event-generator
+    - - name: send-event
+        template: send-event
+        arguments:
+          eventId: "{{steps.generate-event.outputs.result}}"
+    - - name: wait
+        template: wait-template
+    - - name: validate-couchbase
+        template: couchbase-validator
+        arguments:
+          eventId: "{{steps.generate-event.outputs.result}}"
+
+  - name: event-generator
+    script:
+      image: alpine:3.20.3
+      command: [sh]
+      source: |
+        echo "evt-$(date +%s)-$RANDOM"
+
+  - name: send-event
+    inputs:
+      parameters:
+      - name: eventId
+    container:
+      image: alpine/curl:8.11.1
+      command: [sh, -c]
+      args:
+        - |
+          curl -X POST http://producer-svc:8080/send-event \
+            -H "Content-Type: application/json" \
+            -d '{"eventId": "{{inputs.parameters.eventId}}", "type": "ORDER_CREATED", "customerId": "C001", "amount": 150.50}'
+
+  - name: wait-template
+    container:
+      image: alpine:3.20.3
+      command: [sh, -c]
+      args:
+        - "sleep 10"
+
+  - name: couchbase-validator
+    inputs:
+      parameters:
+      - name: event

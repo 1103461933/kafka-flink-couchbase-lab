@@ -1,0 +1,67 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - dev
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GIT_TOKEN }}
+          ref: dev
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Producer
+        uses: docker/build-push-action@v6
+        with:
+          context: ./producer
+          push: true
+          tags: |
+            xlen911/kafka-producer:${{ env.VERSION }}
+            xlen911/kafka-producer:dev-latest
+
+      - name: Build and push Flink Job
+        uses: docker/build-push-action@v6
+        with:
+          context: ./flink
+          push: true
+          tags: |
+            xlen911/flink-job:${{ env.VERSION }}
+            xlen911/flink-job:dev-latest
+
+      - name: Update image tags in Git
+        run: |
+          # Actualizar Producer
+          sed -i "s|image: xlen911/kafka-producer:.*|image: xlen911/kafka-producer:${{ env.VERSION }}|g" kubernetes/producer/deployment.yaml
+          
+          # Actualizar Flink
+          sed -i "s|image: xlen911/flink-job:.*|image: xlen911/flink-job:${{ env.VERSION }}|g" kubernetes/flink/flink-deployment.yaml
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kubernetes/producer/deployment.yaml kubernetes/flink/flink-deployment.yaml
+          git commit -m "[skip ci] Update images to ${{ env.VERSION }} for dev"
+          git push origin dev

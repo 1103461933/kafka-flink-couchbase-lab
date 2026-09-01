@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: couchbase
+  namespace: kafka-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: couchbase
+  template:
+    metadata:
+      labels:
+        app: couchbase
+    spec:
+      containers:
+      - name: couchbase
+        image: couchbase/server:community-7.1.0
+        env:
+          - name: COUCHBASE_ADMINISTRATOR_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: couchbase-credentials
+                key: username
+          - name: COUCHBASE_ADMINISTRATOR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: couchbase-credentials
+                key: password
+        ports:
+          - containerPort: 8091
+            name: webui
+          - containerPort: 11210
+            name: memcached
+        volumeMounts:
+          - name: data
+            mountPath: /opt/couchbase/var
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        readinessProbe:
+          httpGet:
+            path: /pools
+            port: 8091
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /pools
+            port: 8091
+          initialDelaySeconds: 60
+          periodSeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: couchbase-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: couchbase-pvc
+  namespace: kafka-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchbase-svc
+  namespace: kafka-dev
+spec:
+  selector:
+    app: couchbase
+  ports:
+    - name: webui
+      port: 8091
+      targetPort: 8091
+    - name: memcached
+      port: 11210
+      targetPort: 11210
+  clusterIP: None

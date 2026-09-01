@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kafka-flink-couchbase
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/1103461933/kafka-flink-couchbase-lab.git
+    targetRevision: main
+    path: ./kubernetes
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
