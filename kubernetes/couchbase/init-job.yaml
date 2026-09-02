@@ -3,10 +3,6 @@ kind: Job
 metadata:
   name: couchbase-init
   namespace: kafka-dev
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-    argocd.argoproj.io/hook: Sync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
     spec:
@@ -37,11 +33,12 @@ spec:
 
           echo "==> Esperando a que la API REST de Couchbase esté disponible..."
           for i in $(seq 1 60); do
-            if curl --silent --fail "http://$HOST/pools" > /dev/null 2>&1; then
-              echo "✅ Couchbase API is ready"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$HOST/pools" || true)
+            if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 401 ]; then
+              echo "✅ Couchbase API is ready (HTTP $STATUS)"
               break
             fi
-            echo "Waiting for Couchbase... attempt $i/60"
+            echo "Waiting for Couchbase... attempt $i/60 (HTTP $STATUS)"
             sleep 5
 
             if [ $i -eq 60 ]; then
@@ -51,8 +48,8 @@ spec:
           done
 
           echo "==> Verificando cluster..."
-          if couchbase-cli cluster-info -c $HOST -u $USERNAME -p $PASSWORD 2>/dev/null; then
-            echo "✅ Cluster already initialized"
+          if curl --silent -u "$USERNAME:$PASSWORD" "http://$HOST/pools/default" | grep -q '"isInitialized":true\|"nodes"'; then
+            echo "✅ Cluster dynamic state: Already initialized"
           else
             echo "==> Inicializando cluster..."
             couchbase-cli cluster-init -c $HOST \
@@ -61,14 +58,13 @@ spec:
               --cluster-name=my-cluster \
               --services=data,index,query,fts \
               --index-storage-setting=default \
-              --memory-quota=1024 \
-              --index-memory-quota=256 \
-              --fts-memory-quota=256
+              --cluster-ramsize=1024 \
+              --cluster-index-ramsize=512
             echo "✅ Cluster initialized"
           fi
 
           echo "==> Verificando bucket 'events'..."
-          if couchbase-cli bucket-list -c $HOST -u $USERNAME -p $PASSWORD | grep -q "events"; then
+          if couchbase-cli bucket-list -c $HOST -u $USERNAME -p $PASSWORD 2>/dev/null | grep -q "events"; then
             echo "✅ Bucket 'events' already exists"
           else
             echo "==> Creando bucket 'events'..."
@@ -83,24 +79,24 @@ spec:
           fi
 
           echo "==> Verificando scope 'application'..."
-          if curl --silent --fail -u $USERNAME:$PASSWORD "http://$HOST/pools/default/buckets/events/scopes" | grep -q '"name":"application"'; then
+          if curl --silent -u "$USERNAME:$PASSWORD" "http://$HOST/pools/default/buckets/events/scopes" 2>/dev/null | grep -q '"name":"application"'; then
             echo "✅ Scope 'application' already exists"
           else
             echo "==> Creando scope 'application'..."
-            curl --silent --fail -u "$USERNAME:$PASSWORD" \
+            curl --silent -u "$USERNAME:$PASSWORD" \
               -X POST "http://$HOST/pools/default/buckets/events/scopes" \
-              -d "name=application"
+              -d "name=application" > /dev/null
             echo "✅ Scope 'application' created"
           fi
 
           echo "==> Verificando colección 'processed-events'..."
-          if curl --silent --fail -u $USERNAME:$PASSWORD "http://$HOST/pools/default/buckets/events/scopes/application/collections" | grep -q '"name":"processed-events"'; then
+          if curl --silent -u "$USERNAME:$PASSWORD" "http://$HOST/pools/default/buckets/events/scopes/application/collections" 2>/dev/null | grep -q '"name":"processed-events"'; then
             echo "✅ Colección 'processed-events' already exists"
           else
             echo "==> Creando colección 'processed-events'..."
-            curl --silent --fail -u "$USERNAME:$PASSWORD" \
+            curl --silent -u "$USERNAME:$PASSWORD" \
               -X POST "http://$HOST/pools/default/buckets/events/scopes/application/collections" \
-              -d "name=processed-events"
+              -d "name=processed-events" > /dev/null
             echo "✅ Colección 'processed-events' created"
           fi
 

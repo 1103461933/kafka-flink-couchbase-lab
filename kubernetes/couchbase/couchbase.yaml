@@ -1,3 +1,4 @@
+# kubernetes/couchbase/couchbase.yaml (CORREGIDO)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,22 +42,24 @@ spec:
             mountPath: /opt/couchbase/var
         resources:
           requests:
-            memory: "1Gi"
+            memory: "1.5Gi"
             cpu: "500m"
           limits:
-            memory: "2Gi"
+            memory: "2.5Gi"
             cpu: "1"
+        # 🔴 CORREGIDO: Ambos probes ahora usan TCP en lugar de HTTP
         readinessProbe:
           tcpSocket:
             port: 8091
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /pools
-            port: 8091
           initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          tcpSocket:
+            port: 8091
+          initialDelaySeconds: 120
           periodSeconds: 20
+          failureThreshold: 6
       volumes:
         - name: data
           persistentVolumeClaim:

@@ -17,30 +17,19 @@ spec:
     spec:
       containers:
       - name: producer
-        image: xlen911/kafka-producer:v1.0.0
-        ports:
-          - containerPort: 8080
-        env:
-          - name: KAFKA_BROKERS
-            value: "my-kafka-cluster-kafka-brokers.kafka-dev.svc.cluster.local:9092"
-          - name: KAFKA_TOPIC
-            value: "events"
+        image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+        command:
+          - sh
+          - -c
+          - |
+            while true; do
+              echo '{"id":"'$(date +%s)'","type":"LOGIN","amount":100}' | bin/kafka-console-producer.sh --bootstrap-server my-kafka-cluster-kafka-bootstrap:9092 --topic events
+              sleep 2
+            done
         resources:
           requests:
-            memory: "256Mi"
+            memory: "128Mi"
             cpu: "100m"
           limits:
-            memory: "512Mi"
-            cpu: "250m"
-        readinessProbe:
-          httpGet:
-            path: /send-event
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /send-event
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
+            memory: "256Mi"
+            cpu: "200m"
