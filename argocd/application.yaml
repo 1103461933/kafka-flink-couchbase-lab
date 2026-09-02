@@ -3,11 +3,13 @@ kind: Application
 metadata:
   name: kafka-flink-couchbase
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
-    repoURL: https://github.com/1103461933/kafka-flink-couchbase-lab.git
-    targetRevision: main
+    repoURL: https://github.com/<tu-usuario>/kafka-flink-couchbase-lab.git
+    targetRevision: dev
     path: ./kubernetes
   destination:
     server: https://kubernetes.default.svc
@@ -19,3 +21,13 @@ spec:
     syncOptions:
       - CreateNamespace=false
       - ServerSideApply=true
+      - PrunePropagationPolicy=foreground
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: flink.apache.org
+      kind: FlinkDeployment
+      jsonPointers:
+        - /status

@@ -14,8 +14,6 @@ spec:
         template: send-event
         arguments:
           eventId: "{{steps.generate-event.outputs.result}}"
-    - - name: wait
-        template: wait-template
     - - name: validate-couchbase
         template: couchbase-validator
         arguments:
@@ -26,7 +24,7 @@ spec:
       image: alpine:3.20.3
       command: [sh]
       source: |
-        echo "evt-$(date +%s)-$RANDOM"
+        echo "evt-$(date +%s)-$(date +%N)"
 
   - name: send-event
     inputs:
@@ -37,18 +35,63 @@ spec:
       command: [sh, -c]
       args:
         - |
-          curl -X POST http://producer-svc:8080/send-event \
+          # 🔴 Usar --fail-with-body para detectar errores de Producer
+          curl --fail-with-body -X POST \
             -H "Content-Type: application/json" \
-            -d '{"eventId": "{{inputs.parameters.eventId}}", "type": "ORDER_CREATED", "customerId": "C001", "amount": 150.50}'
-
-  - name: wait-template
-    container:
-      image: alpine:3.20.3
-      command: [sh, -c]
-      args:
-        - "sleep 10"
+            -d '{"eventId": "{{inputs.parameters.eventId}}", "type": "ORDER_CREATED", "customerId": "C001", "amount": 150.50}' \
+            http://producer-svc:8080/send-event
 
   - name: couchbase-validator
     inputs:
       parameters:
-      - name: event
+      - name: eventId
+    container:
+      image: alpine/curl:8.11.1
+      env:
+        - name: COUCHBASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: couchbase-credentials
+              key: username
+        - name: COUCHBASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: couchbase-credentials
+              key: password
+      command: [sh, -c]
+      args:
+        - |
+          USERNAME=$COUCHBASE_USERNAME
+          PASSWORD=$COUCHBASE_PASSWORD
+          EVENT_ID="{{inputs.parameters.eventId}}"
+
+          echo "Polling for event $EVENT_ID in Couchbase..."
+
+          for i in $(seq 1 30); do
+            # 🔴 CORREGIDO: Usar Query API REST en puerto 8093
+            QUERY="SELECT * FROM events.application.\`processed-events\` WHERE eventId = '$EVENT_ID';"
+            RESPONSE=$(curl -s -X POST \
+              -u "$USERNAME:$PASSWORD" \
+              -H "Content-Type: application/json" \
+              -d "{\"statement\": \"$QUERY\"}" \
+              "http://couchbase-svc:8093/query/service")
+
+            # 🔴 CORREGIDO: Verificar status=success y que el documento existe
+            if echo "$RESPONSE" | grep -q '"status":"success"'; then
+              if echo "$RESPONSE" | grep -q "\"eventId\":\"$EVENT_ID\""; then
+                echo "✅ SUCCESS: Event found in Couchbase after $i attempts"
+                exit 0
+              else
+                echo "Attempt $i/30: Event not found yet (query successful), waiting 2 seconds..."
+              fi
+            else
+              # 🔴 CORREGIDO: Diferenciar error de query vs documento no encontrado
+              echo "⚠️ Attempt $i/30: Query error: $RESPONSE"
+              # No salir, reintentar
+            fi
+
+            sleep 2
+          done
+
+          echo "❌ FAILURE: Event NOT found in Couchbase after 30 attempts"
+          exit 1

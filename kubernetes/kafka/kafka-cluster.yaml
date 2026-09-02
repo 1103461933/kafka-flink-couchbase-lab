@@ -4,7 +4,7 @@ metadata:
   name: my-kafka-cluster
   namespace: kafka-dev
   annotations:
-    strimzi.io/kafka-version: "3.9.0"
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   kafka:
     replicas: 1

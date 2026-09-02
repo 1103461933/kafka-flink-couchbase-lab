@@ -3,56 +3,42 @@ kind: FlinkDeployment
 metadata:
   name: event-processor
   namespace: kafka-dev
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   image: xlen911/flink-job:v1.0.0
   flinkVersion: v1_20
   serviceAccount: flink
+  podTemplate:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+    spec:
+      containers:
+        - name: flink-main-container
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "my-kafka-cluster-kafka-brokers.kafka-dev.svc.cluster.local:9092"
+            - name: COUCHBASE_HOST
+              value: "couchbase-svc.kafka-dev.svc.cluster.local"
+            - name: COUCHBASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: couchbase-credentials
+                  key: username
+            - name: COUCHBASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: couchbase-credentials
+                  key: password
   jobManager:
     resource:
       cpu: 1
       memory: "2048m"
-    env:
-      - name: KAFKA_BOOTSTRAP_SERVERS
-        value: "my-kafka-cluster-kafka-brokers.kafka-dev.svc.cluster.local:9092"
-      - name: COUCHBASE_HOST
-        value: "couchbase-svc.kafka-dev.svc.cluster.local"
-      - name: COUCHBASE_USERNAME
-        valueFrom:
-          secretKeyRef:
-            name: couchbase-credentials
-            key: username
-      - name: COUCHBASE_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: couchbase-credentials
-            key: password
   taskManager:
     resource:
       cpu: 1
       memory: "2048m"
     replicas: 1
-    env:
-      - name: KAFKA_BOOTSTRAP_SERVERS
-        value: "my-kafka-cluster-kafka-brokers.kafka-dev.svc.cluster.local:9092"
-      - name: COUCHBASE_HOST
-        value: "couchbase-svc.kafka-dev.svc.cluster.local"
-      - name: COUCHBASE_USERNAME
-        valueFrom:
-          secretKeyRef:
-            name: couchbase-credentials
-            key: username
-      - name: COUCHBASE_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: couchbase-credentials
-            key: password
   job:
-    jarURI: local:///opt/flink/usrlib/flink-job.jar
-    parallelism: 3
-    upgradeMode: stateless
-    state: running
-  flinkConfiguration:
-    execution.checkpointing.interval: 10000
-    execution.checkpointing.mode: EXACTLY_ONCE
-    state.savepoints.dir: /opt/flink/data/savepoints
-    state.checkpoints.dir: /opt/flink/data/checkpoints
+    jarURI: local:///opt/flink/

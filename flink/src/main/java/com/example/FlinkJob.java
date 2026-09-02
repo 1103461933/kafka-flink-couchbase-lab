@@ -26,7 +26,7 @@ public class FlinkJob {
         String couchbaseHost = getEnv("COUCHBASE_HOST", "couchbase-svc.kafka-dev.svc.cluster.local");
         String couchbaseUsername = getEnv("COUCHBASE_USERNAME", "admin");
         String couchbasePassword = getEnv("COUCHBASE_PASSWORD", "SecurePassword123!");
-        String kafkaBrokers = getEnv("KAFKA_BOOTSTRAP_SERVERS", 
+        String kafkaBrokers = getEnv("KAFKA_BOOTSTRAP_SERVERS",
             "my-kafka-cluster-kafka-brokers.kafka-dev.svc.cluster.local:9092");
 
         LOG.info("Starting Flink Job...");
@@ -51,7 +51,7 @@ public class FlinkJob {
                     JsonNode jsonNode = mapper.readTree(event);
 
                     // Validación: debe tener eventId
-                    if (!jsonNode.has("eventId") || 
+                    if (!jsonNode.has("eventId") ||
                         jsonNode.get("eventId").asText().isEmpty()) {
                         LOG.warn("Event without eventId, discarding: {}", event);
                         return null;
@@ -86,16 +86,16 @@ public class FlinkJob {
             @Override
             public void open(Configuration parameters) throws Exception {
                 LOG.info("Connecting to Couchbase at {}", couchbaseHost);
-                
+
                 cluster = Cluster.connect(
                     couchbaseHost,
                     ClusterOptions.clusterOptions(couchbaseUsername, couchbasePassword)
                 );
-                
+
                 Bucket bucket = cluster.bucket("events");
                 bucket.waitUntilReady(java.time.Duration.ofSeconds(30));
                 collection = bucket.scope("application").collection("processed-events");
-                
+
                 LOG.info("Connected to Couchbase successfully");
             }
 

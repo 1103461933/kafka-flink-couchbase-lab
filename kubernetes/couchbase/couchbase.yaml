@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: couchbase
   namespace: kafka-dev
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   replicas: 1
   selector:
@@ -30,6 +32,8 @@ spec:
         ports:
           - containerPort: 8091
             name: webui
+          - containerPort: 8093
+            name: query
           - containerPort: 11210
             name: memcached
         volumeMounts:
@@ -43,8 +47,7 @@ spec:
             memory: "2Gi"
             cpu: "1"
         readinessProbe:
-          httpGet:
-            path: /pools
+          tcpSocket:
             port: 8091
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -64,6 +67,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: couchbase-pvc
   namespace: kafka-dev
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -76,6 +81,8 @@ kind: Service
 metadata:
   name: couchbase-svc
   namespace: kafka-dev
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   selector:
     app: couchbase
@@ -83,6 +90,9 @@ spec:
     - name: webui
       port: 8091
       targetPort: 8091
+    - name: query
+      port: 8093
+      targetPort: 8093
     - name: memcached
       port: 11210
       targetPort: 11210
