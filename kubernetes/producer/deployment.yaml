@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: producer
-        image: xlen911/kafka-producer:v1.1.6
+        image: xlen911/kafka-producer:v1.1.7
         command:
           - sh
           - -c

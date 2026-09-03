@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  image: xlen911/flink-job:v1.1.6
+  image: xlen911/flink-job:v1.1.7
   flinkVersion: v1_19
   serviceAccount: flink
   podTemplate:
