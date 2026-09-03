@@ -73,6 +73,28 @@ jobs:
 
       - name: Update image tags in Git
         run: |
+          # Actualizar Producer (busca cualquier imagen que termine en kafka-producer)
+          sed -i "s|image: .*/kafka-producer:.*|image: xlen911/kafka-producer:${{ env.VERSION }}|g" kubernetes/producer/deployment.yaml
+          
+          # Actualizar Flink (busca cualquier imagen de flink-job o flink base)
+          sed -i "s|image: .*/flink-job:.*|image: xlen911/flink-job:${{ env.VERSION }}|g" kubernetes/flink/flink-deployment.yaml
+          sed -i "s|image: flink:.*|image: xlen911/flink-job:${{ env.VERSION }}|g" kubernetes/flink/flink-deployment.yaml
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kubernetes/producer/deployment.yaml kubernetes/flink/flink-deployment.yaml
+          
+          if git diff --staged --quiet; then
+            echo "⚠️ No hay cambios en las versiones."
+          else
+            git commit -m "[skip ci] Update images to ${{ env.VERSION }} for main"
+            git push origin HEAD:main
+            echo "✅ Repositorio actualizado con éxito."
+          fi
+      
+      
+      - name: Update image tags in Git
+        run: |
           # Actualizar Producer
           sed -i "s|image: xlen911/kafka-producer:.*|image: xlen911/kafka-producer:${{ env.VERSION }}|g" kubernetes/producer/deployment.yaml
           
