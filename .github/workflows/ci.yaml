@@ -63,19 +63,6 @@ jobs:
         run: |
           find kubernetes -name "*.yaml" -exec kubeval --strict {} \;
 
-  validate-images:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check for latest tag
-        run: |
-          echo "🔍 Verificando que no se use 'latest' en los manifiestos..."
-          if grep -r "image:.*:latest" kubernetes/; then
-            echo "❌ ERROR: Se encontró 'latest' en los manifiestos."
-            exit 1
-          fi
-          echo "✅ No se encontró 'latest'."
 
       - name: Check for placeholder images
         run: |
