@@ -11,6 +11,8 @@ spec:
     repoURL: https://github.com/1103461933/kafka-flink-couchbase-lab.git
     targetRevision: main
     path: ./kubernetes
+    directory:
+      recurse: true
   destination:
     server: https://kubernetes.default.svc
     namespace: kafka-dev
