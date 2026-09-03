@@ -1,11 +1,6 @@
 name: Build and Deploy
 
 on:
-  # 🔴 Solo se ejecuta cuando se crea un tag
-  push:
-    tags:
-      - 'v*'
-  # 🔴 También se puede ejecutar manualmente desde la UI de GitHub
   workflow_dispatch:
     inputs:
       version:
@@ -31,18 +26,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GIT_TOKEN }}
-          ref: dev
 
       - name: Set version
         id: version
         run: |
-          # 🔴 Si es manual, usar el input; si es tag, usar el tag
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+
+      - name: Create and push Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Verificar si el tag ya existe local o remotamente para evitar errores
+          if git rev-parse "${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "⚠️ El tag ${{ env.VERSION }} ya existe localmente."
           else
-            echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
+            git tag ${{ env.VERSION }}
+            git push origin ${{ env.VERSION }}
+            echo "✅ Tag ${{ env.VERSION }} creado y publicado exitosamente."
           fi
 
       - name: Log in to Docker Hub
@@ -81,4 +82,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add kubernetes/producer/deployment.yaml kubernetes/flink/flink-deployment.yaml
           git commit -m "[skip ci] Update images to ${{ env.VERSION }} for dev"
-          git push origin dev
+          git push origin HEAD:dev
