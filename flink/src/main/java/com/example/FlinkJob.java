@@ -1,5 +1,6 @@
 package com.example;
 
+import org.apache.flink.configuration.Configuration;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.java.*;
