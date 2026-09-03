@@ -1,12 +1,25 @@
 name: Build and Deploy
 
 on:
+  # 🔴 Solo se ejecuta cuando se crea un tag
   push:
-    branches:
-      - dev
-      - main
     tags:
       - 'v*'
+  # 🔴 También se puede ejecutar manualmente desde la UI de GitHub
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión (ej: v1.1.0)'
+        required: true
+        type: string
+        default: 'v1.1.0'
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
 
 jobs:
   build-and-deploy:
@@ -23,7 +36,10 @@ jobs:
       - name: Set version
         id: version
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          # 🔴 Si es manual, usar el input; si es tag, usar el tag
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           else
             echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
