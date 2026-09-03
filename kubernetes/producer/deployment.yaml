@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: producer
-        image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+        image: xlen911/kafka-producer:v1.1.5
         command:
           - sh
           - -c
