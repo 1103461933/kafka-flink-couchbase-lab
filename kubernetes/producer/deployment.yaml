@@ -16,20 +16,42 @@ spec:
         app: producer
     spec:
       containers:
-      - name: producer
-        image: xlen911/kafka-producer:v1.1.9
-        command:
-          - sh
-          - -c
-          - |
-            while true; do
-              echo '{"id":"'$(date +%s)'","type":"LOGIN","amount":100}' | bin/kafka-console-producer.sh --bootstrap-server my-kafka-cluster-kafka-bootstrap:9092 --topic events
-              sleep 2
-            done
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: producer
+          image: xlen911/kafka-producer:v1.1.9
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+
+          env:
+            - name: KAFKA_BROKERS
+              value: "my-kafka-cluster-kafka-bootstrap:9092"
+
+            - name: KAFKA_TOPIC
+              value: "events"
+
+            - name: ENABLE_AUTO_EVENTS
+              value: "false"
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
