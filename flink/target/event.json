@@ -1,7 +1,0 @@
-﻿{
-  "eventId": "lab-level1-003",
-  "customerId": "customer-1",
-  "type": "ORDER_CREATED",
-  "amount": 100.50,
-  "source": "level1-test"
-}
