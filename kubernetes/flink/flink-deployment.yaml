@@ -51,7 +51,7 @@ spec:
 
   taskManager:
     resource:
-      cpu: 500m
+      cpu: 0.5
       memory: "2048m"
     replicas: 1
 
