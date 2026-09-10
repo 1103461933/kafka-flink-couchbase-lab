@@ -44,7 +44,10 @@ app.post('/send-event', async (req, res) => {
 
     await producer.send({
       topic: TOPIC,
-      messages: [{ value: JSON.stringify(event) }],
+      messages: [{
+        key: event.customerId,
+        value: JSON.stringify(event)
+      }],
     });
 
     console.log('📤 Event sent:', event.eventId);
