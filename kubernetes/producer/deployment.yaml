@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: producer
-          image: xlen911/kafka-producer:v1.1.12
+          image: xlen911/kafka-producer:v1.1.13
           imagePullPolicy: IfNotPresent
 
           ports:
