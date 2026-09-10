@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: producer
-          image: xlen911/kafka-producer:v1.1.9
+          image: xlen911/kafka-producer:v1.1.10
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -26,11 +26,9 @@ spec:
 
           env:
             - name: KAFKA_BROKERS
-              value: "my-kafka-cluster-kafka-bootstrap:9092"
-
+              value: "my-kafka-cluster-kafka-bootstrap.kafka-dev.svc.cluster.local:9092"  # 🔴 CORREGIDO: FQDN completo
             - name: KAFKA_TOPIC
               value: "events"
-
             - name: ENABLE_AUTO_EVENTS
               value: "false"
 

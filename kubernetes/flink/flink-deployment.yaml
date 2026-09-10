@@ -6,7 +6,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  image: xlen911/flink-job:v1.1.9
+  image: xlen911/flink-job:v1.1.10
   flinkVersion: v1_19
   serviceAccount: flink
   podTemplate:
@@ -33,14 +33,19 @@ spec:
                   key: password
   jobManager:
     resource:
-      cpu: 0.5
-      memory: "1024m"
+      cpu: 1
+      memory: "2048m"
   taskManager:
     resource:
-      cpu: 0.5
-      memory: "1024m"
+      cpu: 1
+      memory: "2048m"
     replicas: 1
   job:
-    jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar
-    parallelism: 1
+    jarURI: local:///opt/flink/usrlib/flink-job.jar   # 🔴 CORREGIDO: tu JAR, no el de ejemplo
+    parallelism: 3                                     # 🔴 AJUSTADO: coincide con particiones de Kafka
     upgradeMode: stateless
+    state: running
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "3"                 # 🔴 AGREGADO
+    state.savepoints.dir: /opt/flink/data/savepoints   # 🔴 AGREGADO
+    state.checkpoints.dir: /opt/flink/data/checkpoints # 🔴 AGREGADO
