@@ -57,7 +57,7 @@ spec:
 
   job:
     jarURI: local:///opt/flink/usrlib/flink-job.jar
-    parallelism: 2
+    parallelism: 3
     upgradeMode: stateless
     state: running
 
