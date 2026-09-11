@@ -8,7 +8,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 
 spec:
-  image: xlen911/flink-job:v1.1.16
+  image: xlen911/flink-job:v1.1.17
 
   # IMPORTANTE:
   # Tu imagen aparentemente contiene Flink 1.20.
