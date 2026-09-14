@@ -1,8 +1,8 @@
-FROM flink:1.20.0-scala_2.12-java11
+FROM flink:1.19.3-scala_2.12-java11
 
 # 🔴 CORREGIDO: Plugin de Azure Filesystem desde /opt/flink/opt/
 RUN mkdir -p /opt/flink/plugins/azure-fs-hadoop && \
-    cp /opt/flink/opt/flink-azure-fs-hadoop-1.20.0.jar \
+    cp /opt/flink/opt/flink-azure-fs-hadoop-1.19.3.jar \
        /opt/flink/plugins/azure-fs-hadoop/
 
 # Copiar el JAR del Job
