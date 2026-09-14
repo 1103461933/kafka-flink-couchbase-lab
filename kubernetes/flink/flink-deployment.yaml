@@ -67,6 +67,7 @@ spec:
     # CORREGIDO: la URI debe tener esquema.
     execution.checkpointing.dir: "file:///opt/flink/data/checkpoints"
     execution.checkpointing.savepoint-dir: "file:///opt/flink/data/savepoints"
-
+    execution.checkpointing.interval: "10s"
+    execution.checkpointing.mode: "EXACTLY_ONCE"
     execution.checkpointing.externalized-checkpoint-retention: "RETAIN_ON_CANCELLATION"
 
